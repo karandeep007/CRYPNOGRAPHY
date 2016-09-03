@@ -3,9 +3,10 @@
 #include <ctype.h>
 #include <string.h>
 
-void encrypt(char string[65],char hide[3][65],int select );
+void encrypt(char hide[3][65],int select );
 void decrypt(char hide[3][65],int select );
 void make(char crypt[65],char original[64], char hide[3][65],int select );
+void destroy(char word[65],char scramble[64], char hide[3][65], int select);
 
 int main()
 {
@@ -52,19 +53,42 @@ int main()
     
     if( size%64!=0 )
     {
-        int smaller=size%64;
-        while(slack<64-smaller)
+        int smaller=size%(64-1);
+        while(slack<(64-1)-smaller)
         {
             fputc('\0',ptr);
             slack++;
         }
+        fputc(EOF,ptr);
     }
     //roll back pointer
     fseek(ptr, 0 , SEEK_SET);
     
     
-    int index=0, select=0; //Change select by BMP colour detection
-    char word[65]; //encrypt on a check of 64 (+1 NULL ) characters at a time; for full usage of key; increased strength
+    int select=1;
+    
+    encrypt(keys,select);
+    
+    decrypt(keys,select);
+    
+    
+    
+}
+void encrypt(char hide[3][65],int select )
+{
+    int index=0; //Change select by BMP colour detection
+    char c,word[65], scramble[64]; //encrypt on a check of 64 (+1 NULL ) characters at a time; for full usage of key; increased strength
+    
+    FILE *ptr=fopen("text","r");
+    
+    FILE *into=fopen("cypto.txt","a");
+    
+    if(ptr==NULL)
+    {
+        printf("Couldnot open text file!\n");
+        return ;
+    } 
+   
     
     // Encryption begins
     for(c=fgetc(ptr); c!=EOF; c=fgetc(ptr) )
@@ -74,39 +98,30 @@ int main()
         if(index==64)
         {
             word[index]='\0'; //64th is NULL
-            //printf("%s \t||\t\n",word);
-            encrypt(word,keys,select); //select depends on the signature color in the BMP that determines which one of the three keys is to be used.
+           
+            destroy(word,scramble,hide,select); //select depends on the signature color in the BMP that determines which one of the three keys is to be used.
+            fwrite(scramble, sizeof(scramble) , 1 , into);
             
-            index=0;
+             index=0;
         }
     }
     fclose(ptr);
-    
-    decrypt(keys,select);
-    
-    
+
+    fclose(into);
     
 }
-void encrypt(char string[65],char hide[3][65],int select )
+void destroy(char word[65],char scramble[64], char hide[3][65], int select)
 {
-    
     int i,upper_b=126,lower_b=32,rotate;
-    char crypto[64]; //NULL appended
-    
-    FILE *into=fopen("cypto.txt","a");
-    
-    //printf("%s\n",hide[0]);
     
     rotate=upper_b-lower_b;
+    
     for(i=0; i <65; i++)
     {
-        
-        crypto[i]=( ( (string[i]-lower_b) + (hide[select][i]-lower_b) )%rotate + lower_b);
+        //frequency adder
+        scramble[i]=( ( (word[i]-lower_b) + (hide[select][i]-lower_b) )%rotate + lower_b);
         
     }
-    
-    fwrite(crypto, sizeof(crypto) , 1 , into);
-    fclose(into);
     
 }
 void decrypt(char hide[3][65],int select )
