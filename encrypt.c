@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include "bmp.h"
 
-void encrypt(char hide[3][65],int select );
-void decrypt(char hide[3][65],int select );
+void colourdetect(char infile[50], int sequence[10000]);
+void encrypt(char hide[3][65],int sequence[10000] );
+void decrypt(char hide[3][65],int sequence[10000]);
 void make(char crypt[65],char original[64], char hide[3][65],int select );
 void destroy(char word[65],char scramble[64], char hide[3][65], int select);
 
@@ -65,18 +67,122 @@ int main()
     fseek(ptr, 0 , SEEK_SET);
     
     
-    int select=1;
+    int sequence[10000];
     
-    encrypt(keys,select);
+    char sector[50];
+    printf("Enter Image file name: ");
+    scanf("%s",sector);
     
-    decrypt(keys,select);
+    colourdetect(sector,sequence);
+    
+    encrypt(keys,sequence);
+    
+    decrypt(keys,sequence);
     
     
     
 }
-void encrypt(char hide[3][65],int select )
+void colourdetect(char infile[50], int sequence[10000])
 {
-    int index=0; //Change select by BMP colour detection
+   
+    int length=0,index=0;
+    
+    for(int i=0; i<10000; i++)
+    {
+        sequence[i]=-1;
+    }
+    
+    //strcpy(infile,"clue.bmp");
+    
+    FILE* inptr = fopen(infile, "r");
+    if (inptr == NULL)
+    {
+        printf("Could not Image %s.\n", infile);
+        return ;
+    }
+    
+   
+    // read infile's BITMAPFILEHEADER
+    BITMAPFILEHEADER bf;
+    fread(&bf, sizeof(BITMAPFILEHEADER), 1, inptr);
+
+    // read infile's BITMAPINFOHEADER
+    BITMAPINFOHEADER bi;
+    fread(&bi, sizeof(BITMAPINFOHEADER), 1, inptr);
+
+    // ensure infile is (likely) a 24-bit uncompressed BMP 4.0
+    if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 || bi.biBitCount != 24 || bi.biCompression != 0)
+    {
+        
+        fclose(inptr);
+        fprintf(stderr, "Unsupported file format.\n");
+        return ;
+    }
+   
+    // determine padding for scanlines
+    int padding =  (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+    // iterate over infile's scanlines
+    for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++)
+    {
+        // iterate over pixels in scanline
+        for (int j = 0; j < bi.biWidth; j++)
+        {
+           
+            RGBTRIPLE triple;
+            // read RGB triple from infile
+            fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
+            
+            //65 Value is assumed, ensure proper value
+            
+            if(length%65==0) //assume after entering 64 characters, we need to check the 65th RBG value, including 0;
+            {
+                if( (triple.rgbtRed>triple.rgbtBlue) && (triple.rgbtRed>triple.rgbtGreen) )
+                {
+                    sequence[index]=0; //0 for Red highest
+                    index++;
+                    
+                }
+                else if( (triple.rgbtBlue>triple.rgbtRed) && (triple.rgbtBlue>triple.rgbtGreen) )
+                {
+                    sequence[index]=1; //1 for Blue highest
+                    index++;
+                    
+                }
+                else
+                {
+                    sequence[index]=2; //2 for Green highest
+                    index++;
+                }
+                
+            }
+            length++;
+            
+            
+        }
+
+        // skip over padding, if any
+        fseek(inptr, padding, SEEK_CUR);
+
+    }
+
+    // close infile
+    fclose(inptr);
+    
+    /*
+    //check detected RBGs
+    for(int i=0; i<100; i++)
+    {
+        printf("%d = < %d >\n", i, sequence[i]);
+    }
+    */
+    
+    
+
+    
+}
+void encrypt(char hide[3][65],int sequence[10000])
+{
+    int index=0,select=0,move=0; //Change select by BMP colour detection
     char c,word[65], scramble[64]; //encrypt on a check of 64 (+1 NULL ) characters at a time; for full usage of key; increased strength
     
     FILE *ptr=fopen("text","r");
@@ -98,7 +204,10 @@ void encrypt(char hide[3][65],int select )
         if(index==64)
         {
             word[index]='\0'; //64th is NULL
-           
+            
+            select=sequence[move];
+            move++;
+
             destroy(word,scramble,hide,select); //select depends on the signature color in the BMP that determines which one of the three keys is to be used.
             fwrite(scramble, sizeof(scramble) , 1 , into);
             
@@ -124,7 +233,7 @@ void destroy(char word[65],char scramble[64], char hide[3][65], int select)
     }
     
 }
-void decrypt(char hide[3][65],int select )
+void decrypt(char hide[3][65],int sequence[10000])
 {
     
     
@@ -138,7 +247,7 @@ void decrypt(char hide[3][65],int select )
         return ;
     } 
     
-    int index=0;
+    int index=0,select=0,move=0;
     char c,word[65], original[64];
     
     for(c=getc(out); c!=EOF; c=getc(out))
@@ -146,6 +255,9 @@ void decrypt(char hide[3][65],int select )
         word[index++]=c;
         if( index==64 )
         {
+            select=sequence[move];
+            move++;
+            
             make(word,original,hide,select);
             index=0;
             
