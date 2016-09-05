@@ -4,9 +4,9 @@
 #include <string.h>
 #include "bmp.h"
 
-void colourdetect(char infile[50], int sequence[10000]);
-void encrypt(char hide[3][65],int sequence[10000] );
-void decrypt(char hide[3][65],int sequence[10000]);
+void colourdetect(char infile[50], int sequence[3000]);
+void encrypt(char hide[3][65],int sequence[3000] );
+void decrypt(char hide[3][65],int sequence[3000]);
 void make(char crypt[65],char original[64], char hide[3][65],int select );
 void destroy(char word[65],char scramble[64], char hide[3][65], int select);
 
@@ -67,11 +67,12 @@ int main()
     fseek(ptr, 0 , SEEK_SET);
     
     
-    int sequence[10000];
+    int sequence[3000];
     
     char sector[50];
     printf("Enter Image file name: ");
     scanf("%s",sector);
+    
     
     colourdetect(sector,sequence);
     
@@ -82,12 +83,12 @@ int main()
     
     
 }
-void colourdetect(char infile[50], int sequence[10000])
+void colourdetect(char infile[50], int sequence[3000])
 {
    
     int length=0,index=0;
     
-    for(int i=0; i<10000; i++)
+    for(int i=0; i<3000; i++)
     {
         sequence[i]=-1;
     }
@@ -134,7 +135,7 @@ void colourdetect(char infile[50], int sequence[10000])
             
             //65 Value is assumed, ensure proper value
             
-            if(length%65==0) //assume after entering 64 characters, we need to check the 65th RBG value, including 0;
+            if(length%151==0) //assume after entering 64 characters==150 triplets, we need to check the 151st RBG value, including 0;
             {
                 if( (triple.rgbtRed>triple.rgbtBlue) && (triple.rgbtRed>triple.rgbtGreen) )
                 {
@@ -168,19 +169,19 @@ void colourdetect(char infile[50], int sequence[10000])
     // close infile
     fclose(inptr);
     
-    /*
+/*    
     //check detected RBGs
-    for(int i=0; i<100; i++)
+    for(int i=0; i<3000; i++)
     {
         printf("%d = < %d >\n", i, sequence[i]);
     }
-    */
-    
+
+*/    
     
 
     
 }
-void encrypt(char hide[3][65],int sequence[10000])
+void encrypt(char hide[3][65],int sequence[3000])
 {
     int index=0,select=0,move=0; //Change select by BMP colour detection
     char c,word[65], scramble[64]; //encrypt on a check of 64 (+1 NULL ) characters at a time; for full usage of key; increased strength
@@ -233,7 +234,7 @@ void destroy(char word[65],char scramble[64], char hide[3][65], int select)
     }
     
 }
-void decrypt(char hide[3][65],int sequence[10000])
+void decrypt(char hide[3][65],int sequence[3000])
 {
     
     
