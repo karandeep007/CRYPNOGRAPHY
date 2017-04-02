@@ -1,4 +1,6 @@
-# CRYPNOGRAPHY
-( CRYPTOGRAPHY+STEGANOGRAPHY )
-
-CS50 final project
+# Encryption based Steganography
+  for MOOC CS50 by HarvardX
+  
+  Hiding inforamtion as cryptic text within images 
+  
+  
